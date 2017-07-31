@@ -79,7 +79,6 @@
 #include <asm/smp.h>
 #endif
 
-#include <asm/kpm-init.h>
 
 static int kernel_init(void *);
 
@@ -455,15 +454,6 @@ static void __init mm_init(void)
 	vmalloc_init();
 }
 
-void kpm_init()
-{
-	copy();
-  	copy_page_dir();
-  	delete_kpm_entries();
-  	modify_kernel_pt();
-}
-
-
 asmlinkage void __init start_kernel(void)
 {
 	char * command_line;
@@ -635,7 +625,7 @@ asmlinkage void __init start_kernel(void)
 	sfi_init_late();
 
 	ftrace_init();
-	kpm_init();
+
 	/* Do the rest non-__init'ed, we're now alive */
 	rest_init();
 }

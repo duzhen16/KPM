@@ -31,6 +31,9 @@
 
 #include "mm.h"
 
+#include <asm/kpm-init.h>
+
+
 /*
  * empty_zero_page is a special page that is used for
  * zero-initialized data and COW.
@@ -1024,6 +1027,15 @@ static void __init map_lowmem(void)
 	}
 }
 
+void kpm_init()
+{
+	copy();
+  	copy_page_dir();
+  	delete_kpm_entries();
+  	modify_kernel_pt();
+}
+
+
 /*
  * paging_init() sets up the page tables, initialises the zone memory
  * maps, and sets up the zero page, bad page and bad page tables.
@@ -1037,6 +1049,10 @@ void __init paging_init(struct machine_desc *mdesc)
 	build_mem_type_table();
 	prepare_page_table();
 	map_lowmem();
+
+	kpm_init();
+
+
 	devicemaps_init(mdesc);
 	kmap_init();
 

@@ -371,8 +371,9 @@ extern void __sync_icache_dcache(pte_t pteval);
 static inline void set_pte_at(struct mm_struct *mm, unsigned long addr,
 			      pte_t *ptep, pte_t pteval)
 {
-	if (addr >= TASK_SIZE)
+	if (addr >= TASK_SIZE){
 		set_pte_ext(ptep, pteval, 0);
+	}
 	else {
 		__sync_icache_dcache(pteval);
 		set_pte_ext(ptep, pteval, PTE_EXT_NG);

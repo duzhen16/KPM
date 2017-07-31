@@ -117,7 +117,6 @@ static void  __init  modify_kernel_pt()
 	/* should be implemented */
 
 	printk("modifying ok\n");
-	in();
 	return ;
 }
 

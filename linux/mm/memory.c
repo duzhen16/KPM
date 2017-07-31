@@ -3207,6 +3207,7 @@ static int __do_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 	 * handle that later.
 	 */
 	/* Only go through if we didn't race with anybody else... */
+
 	if (likely(pte_same(*page_table, orig_pte))) {
 		flush_icache_page(vma, page);
 		entry = mk_pte(page, vma->vm_page_prot);
@@ -3223,6 +3224,9 @@ static int __do_fault(struct mm_struct *mm, struct vm_area_struct *vma,
 				get_page(dirty_page);
 			}
 		}
+
+
+		//palce needle here!
 		set_pte_at(mm, address, page_table, entry);
 
 		/* no need to invalidate: a not-present page won't be cached */
