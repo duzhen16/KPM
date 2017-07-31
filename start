@@ -1,0 +1,8 @@
+#!/bin/sh
+
+qemu-system-arm \
+     -M vexpress-a9 \
+     -m 1024M \
+     -kernel linux/arch/arm/boot/zImage \
+     -nographic \
+     -append "nfsroot=192.168.123.148:/home/xsun/kpm/rootfs rw ip=dhcp  console=ttyAMA0" 

@@ -1,0 +1,4 @@
+
+config KPM
+	bool
+	select KPM_ENABLE

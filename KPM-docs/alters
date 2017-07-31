@@ -1,0 +1,20 @@
+Changing on Linux kernelv3.0...
+
+Added files:
+  drivers/:
+	drivers/kpm/Kconfig
+	drivers/kpm/Makefile
+	drivers/kpm/kmp.c
+  include/:
+  	include/linux/kpm.h
+  arch/:
+  	arch/arm/mm/kpm-init.c
+  	arch/arm/include/asm/kpm-init.h
+
+
+*****altered loactions were noted by Sun24*****
+Altered files:
+  	arch/arm/include/asm/memory.h 
+  	linux/arch/arm/mm/init.c
+  	linux/init/main.c
+  	arch/arm/kernel/vmlinux.lds.S  (line 111,line 163 to relocate text and data section)

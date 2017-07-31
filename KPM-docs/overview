@@ -1,0 +1,40 @@
+								KPM OVERVIEW
+Objectives:
+
+1) isolation
+	 |
+	 |---- 1.1 creating a seperate addr space by altering page table	(done)
+	 |---- 1.2 avoid kernel to disable seperate addr space
+			 |
+			 |---- 1.2.1 monitering page table update to avoid kernel modifying page table to disable seperate addr space 	 (ing)
+			 |---- 1.2.2 instrumenting all MMU (CP15) configuration opetations to avoid kernel using unverified page table				-- implementing all "write to ttbr"  operations!
+			 																   to enable MMU persistently                    (will)     -- implementing all "write to sctlr" operations
+
+
+2) context switch
+	 |
+	 |---- 2.1 preventing kernel from gaining control while KPM is accessible at current status		(ing)
+	 |---- 2.2 making sure that in() function is the only way switch into KPM	 (will)
+
+3) against attack
+
+
+
+
+Thread model:
+
+1) KPM integrity
+	 |
+	 |---- isolating KPM from kernel strictly  (ing)
+2) kernel integrity
+     |
+	 |---- code integrity : modifying page table entries which specify kernel code to be Read-Only    (done)
+	 |---- control flow integrity : modifying kernel data(e.g. ret-addr,function-pointers) to hijack control flow to run malicious logic  (will)
+
+
+
+Implementation plans:
+for isolation (refence to SKEE,TZ-RKP,SPROPES etc.):
+	1. checking Page fault handler or page table update handler,placing hooks into these handlers so that hijacking control flow to jump into in()
+	2. using IDA pro to indentify specific binary code which corresponding to writing to TTBR instructions,then replacing them with hooks jumping to in()
+

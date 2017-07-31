@@ -1,0 +1,137 @@
+
+   page dir content
+  for kernel low mem
+
+[virt addr : phys addr]
+   index        val
+0x80006000 : 0x6001140e
+0x80006004 : 0x6011140e
+		   .
+		   .
+		   .
+		   .
+		   .
+    	   .
+0x80006ff8 : 0x9fe1140e
+0x80006ffc : 0x9ff1140e
+
+1140e is the type->port_sect : access attributes
+
+Section entry description(L1 mapping):
+e.g. [0x80006ff8 : 0x9fe1140e]
+  bits    		implication  	 val
+[31:20]		  sect base addr	 0x9fe
+[19]			  NS       		 0b0
+[17]			  nG			 0b0
+[16]			  S 			 0b1
+[15]			 AP[2]			 0b0
+[14:12]	  	    TEX[2:0]   		 0b001
+[11:10]			 AP[1:0]   		 0b01           //Privileged level:R/W  User level:cannt access
+[8:5]			 domain          0b0000			//Domain 0 domain_kernel
+[4]				  XN			 0b0
+[3]				  C				 0b1
+[2]				  B 			 0b1
+[1:0]			 type            0b10 			//Section type size 1M			
+
+
+phys addr region of virtual machine is [0x6000,0000:0xa000,0000]
+page dir locates at virt addr [0x8000,4000:0x8000,8000]
+kernel low mem page dir locates at virt addr [0x8000,6000:0x8000,7000],
+	to manage the 1024M phys addr by 1M slice,hence there total 1024 
+	entries in the page dir content.
+
+
+
+translation table for Vectors mapping
+
+在devicemaps_init()函数中，为Vector创建页表。Vector位于虚拟地址为0xffff,0000
+不属于low mem，要建立二级映射。调用的函数序列依次是devicemaps_init()->create_ma-
+pping()->alloc_init_pud()->alloc_init_section()->alloc_init_pte()->early_pte_all-
+ocerc()至此为止，依次执行计算该VA所对应的L1项在L1中的VA，然后申请一个4K大小页面，
+按照ARM硬件模式处理页面布局，将该页面的VA转化为PA，填充到其对应的L1项中。实验中
+发现，Vector的VA为0xffff,0000，所在的PA是0x9fff,f000,pfn是0x9ffff.对应的L1项的PA
+为0x8000,7ff8, 其中此项填入的值是0x9fff,e821(L2页表所在的PA | port).申请到的L2页
+表的PA对应的VA是0xbfff,e7c0,因此，L2项填入的值是0x9fff,f5df(Vector所在的PA | port)
+即就是说，在建立二级页表时，L1项是在L2页表动态申请成功之后，再根据实际情况填充。
+
+Vector Page table descriptions(L2 mapping)
+e.g.  L1:  pmg at 0x8000,7ff8		L2:  pte at 0xbfff,e7c0(VA)
+		   pmg is 0x9fff,e821			 pte is 0x9fff,f5df
+L1:
+ bits    		implication  	    val
+[31:10]		    L2 base addr     0x9fffe0b100
+[8:5]			  domain 		 	0b0001			//domain 1  domain_user
+[4]				   SBZ				0b0
+[3]				   NX				0b0
+[2]				   PXN 				0b0
+[1:0]			   type 		    0b01     		//coarse page table
+
+L2:
+ bits    		implication  	    val
+[31:12]			frame base addr   0x9ffff
+[11]			    nG				0b0
+[10]				S 				0b1
+[9]				   AP[2]			0b0
+[8:6]			  TEX[2:0]			0b111
+[5:4]			  AP[1:0]			0b01            //Privileged level:R/W  User level:cannot access
+[3]				    C 				0b1
+[2]					B 				0b1
+[1:0]				1XN				0b11 		 
+
+domain(CP15 c3) is 0x15
+	domain 0 is 0b01   Client
+	domain 1 is 0b01   Client 
+	domain 2 is 0b01   Client
+AP:
+AP[2]        AP[1:0]       PL1 access       Unprivileged access         Description
+0              00           No access           No access               All accesses generate Permission faults
+			   01          Read/write 		    No access 			    Access only at PL1
+			   10		   Read/write 			Read-only 			    Writes at PL0 generate Permission faults
+			   11 		   Read/write 		    Read/write 			    Full access
+1 			   00 				-					 - 				    Reserved
+			   01		   Read-only 		    No access 			    Read-only, only at PL1
+			   10 		   Read-only            Read-only			    Read-only at any privilege level, deprecateda
+			   11 		   Read-only 			Read-only 				Read-only at any privilege levelb
+
+
+32位分页机制中pgd=pmd=pud,只有pgd和pte在使用。申请到的L2也表在4k页面布局为
+ *    pgd             pte
+ * |        |
+ * +--------+
+ * |        |       +------------+ +0
+ * +- - - - +       | Linux pt 0 |
+ * |        |       +------------+ +1024
+ * +--------+ +0    | Linux pt 1 |
+ * |        |-----> +------------+ +2048 ---
+ * +- - - - + +4    |  h/w pt 0  |          -
+ * |        |-----> +------------+ +3072     - ARM Linux actually uses！
+ * +--------+ +8    |  h/w pt 1  |          -
+ * |        |       +------------+ +4096 ---
+ *
+
+申请到L2页表所在的页面之后，调用set_pte_ext()函数，依次填入L2页表各个项，填入的值
+是各个页表的物理PA | port (port 即就是访问属性)。
+
+关于port的初始化在arch/arm/mm/mmu.c中静态初始化。
+
+struct mem_type {
+	pteval_t prot_pte;
+	unsigned int prot_l1;
+	unsigned int prot_sect;
+	unsigned int domain;
+};
+
+lowmem map.type = MT_MEMORY:
+		[MT_MEMORY] = {
+				.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY,
+				.prot_l1   = PMD_TYPE_TABLE,
+				.prot_sect = PMD_TYPE_SECT | PMD_SECT_AP_WRITE,    //access attributes
+				.domain    = DOMAIN_KERNEL,
+			},
+Vector map.type = MT_HIGH_VECTORS:
+		[MT_HIGH_VECTORS] = {
+				.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY |
+						L_PTE_USER | L_PTE_RDONLY,//对页的访问方式
+				.prot_l1   = PMD_TYPE_TABLE,//对于L2页表的访问方式
+				.domain    = DOMAIN_USER,
+			},

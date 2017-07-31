@@ -1,0 +1,95 @@
+system arch attributes:
+1.CP15 control registers:
+
+all write operations to these registers should be verified!
+
+	1.1SCTLR--system control register WXN UWXN...  B4.1.130 P1707
+		SCTLR.AFE, bit[29] Access flag enable. The possible values of this bit are:
+					0 In the translation table descriptors, AP[0] is an access permissions bit. The full range of
+						access permissions is supported. No Access flag is implemented.
+					1 In the translation table descriptors, AP[0] is the Access flag. Only the simplified model
+						for access permissions is supported.
+		SCTLR.WXN, bit[19] Write permission implies Execute Never (XN). The possible values of this bit are:
+					0 Regions with write permission are not forced to XN.
+					1 Regions with write permission are forced to XN.
+					Setting this bit to 1 requires all memory regions with write permission to be treated as XN.
+
+		SCTLR.M, bit[0] MMU enable. This is a global enable bit for the PL1&0 stage 1 MMU. The possible values of this bit are:
+					0 PL1&0 stage 1 MMU disabled.
+					1 PL1&0 stage 1 MMU enabled
+
+		Accessing the SCTLR:To access the SCTLR, software reads or writes the CP15 registers with <opc1> set to 0, <CRn> set to c1, <CRm> set to
+		c0, and <opc2> set to 0. For example:
+		MRC p15, 0, <Rt>, c1, c0, 0 ; Read SCTLR into Rt
+		MCR p15, 0, <Rt>, c1, c0, 0 ; Write Rt to SCTLR
+
+		SCTLR is 0x10c3c7f
+				 0b0001 0000 1100 0101 0011 1100 0111 1111
+				 	 |			  |						 |
+				 	 |			  | 				     |
+				 	AFE	         WXN                     M
+
+    1.2TTBCR--translation table base control register
+		TTBCR.N, bits[2:0] Indicate the width of the base address held in TTBR0. In TTBR0, the base address field is
+		bits[31:14-N]. The value of N also determines:
+			• whether TTBR0 or TTBR1 is used as the base address for translation table walks.
+			• the size of the translation table pointed to by TTBR0.
+			N can take any value from 0 to 7, that is, from 0b000 to 0b111.
+		When chaging to KPM set TTBCR.N = 0b001
+
+		Accessing TTBCR:To access TTBCR, software reads or writes the CP15 registers with <opc1> set to 0, <CRn> set to c2, <CRm> set to c0,
+		and <opc2> set to 2. For example:
+		MRC p15, 0, <Rt>, c2, c0, 2 ; Read TTBCR into Rt
+		MCR p15, 0, <Rt>, c2, c0, 2 ; Write RT to TTBCR
+
+		TTBCR is 0x0
+
+
+    1.3TTBRs--translation table base registers 
+	  TTBR0:
+		Accessing TTBR0:To access TTBR0 in an implementation that does not include the Large Physical Address Extension, or bits[31:0]
+		of TTBR0 in an implementation that includes the Large Physical Address Extension, software reads or writes the
+		CP15 registers with <opc1> set to 0, <CRn> set to c2, <CRm> set to c0, and <opc2> set to 0. For example:
+		MRC p15, 0, <Rt>, c2, c0, 0 ; Read 32-bit TTBR0 into Rt
+		MCR p15, 0, <Rt>, c2, c0, 0 ; Write Rt to 32-bit TTBR0
+
+		TTBR0 is 0x6000406a
+		         0b0110 0000 0000 0000  0100 0000 0110 1010
+		           |                     |           | | ||
+		           ------------|----------           -|- ||
+		             L1 translation base             RGN SC
+	  TTBR1:
+	  	Accessing TTBR1:To access TTBR1 in an implementation that does not include the Large Physical Address Extension, or bits[31:0]
+		of TTBR1 in an implementation that includes the Large Physical Address Extension, software reads or writes the
+		CP15 registers with <opc1> set to 0, <CRn> set to c2, <CRm> set to c0, and <opc2> set to 1. For example:
+		MRC p15, 0, <Rt>, c2, c0, 1 ; Read 32-bit TTBR1 into Rt
+		MCR p15, 0, <Rt>, c2, c0, 1 ; Write Rt to 32-bit TTBR1
+
+	1.4CPSR/SPSR--current/saved process state register (reference to ARM manual B1.3.3 p1148)
+		Format:
+		    bits[31:28]   N Z C V condition flags  
+		    bits[23:20]   Reserved
+		    bits[8:6]     A I F   mask bits
+   			bits[4:0]     Mode bits
+   							10000  : user
+   							11111  : system
+   		Maybe I can use the Reserved bit in Page Update handler to specify whether this update has been verified!
+
+   	1.5DPSR Data Fault Status Register  (reference to ARM manual B4.1.52 p1561)
+   		Format:
+   			bits[11]	    WnR     : abort caused by 1:Write 0:Read instruction
+   			bits[10,3:0]    FS[4:0] : fault status bit  reference to ARM manual P1415. Maybe I can use these bits to dispatch implementing fault type!   			bits[7:4]		domain  : domain of the fault address
+
+
+
+  
+2.Linux data structures
+	2.1 inti_mm init_mm was defined in /arch/arm/kernel/init_task.c：
+			struct mm_struct init_mm = INIT_MM(init_mm);
+			
+ 
+
+3.execution environment variables
+
+
+

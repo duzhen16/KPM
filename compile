@@ -1,0 +1,4 @@
+#!/bin/sh
+cd ./linux
+make CROSS_COMPILE=arm-linux-gnueabi- ARCH=arm vexpress_defconfig
+make CROSS_COMPILE=arm-linux-gnueabi- ARCH=arm CONFIG_DEBUG_SECTION_MISMATCH=y

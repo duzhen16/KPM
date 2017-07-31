@@ -1,0 +1,95 @@
+This is the design of layout for KPM
+
+since branch instruction range in ARM is 32M,so layout design
+was updated below:
+
+
+           base-> __________0x8070,0000 -
+            top-> |  stack |             - 8K
+            bot-> |--------|0x806f,e000 -    
+                  |        |      
+                  |  data  |      
+                  |        | 
+      KPM_DATA--->|--------|0x806a,0000
+                  |        |      
+                  |  code  |      
+                  |        |      
+      KPM_TEXT--->|--------|0x8060,4000 -
+                  |   dir  |             - 16K
+      KPM_BASE--->|________|0x8060,0000 -
+
+
+low_mem layout:
+
+                  __________ 0xb000,0000
+                  |        | 
+                  |        | 
+                  |        | 
+                  | .bss   | 
+                  |--------| 
+                  | .data  |  
+                  |--------| 
+                  |   KPM  | 
+                  |--------| 
+                  | .text  | 
+                  |--------| 
+                  |page dir| 
+                  |--------| 
+        init------|________| 0x8000,0000
+                  
+
+
+
+
+
+
+
+old design:
+          				__________0xb800,0000
+          				|        |
+          				|        |
+          				|  data  |
+          				|		     |
+          				|--------|
+          				|        |
+          				|        |
+          				|  code	 |
+          				|        |
+          				|--------|0xb040,4000 -
+          				|   dir  |             - 16K
+      KPM_BASE ___|________|0xb040,0000 -
+          				|        |
+      OUT_BASE ___|_ _ _ _ |0xb020,0000
+          				|        |
+      IN_BASE  ___|________| 
+          				          0xb000,0000
+
+
+
+
+Virtual kernel memory layout:
+    vector  : 0xffff0000 - 0xffff1000   (   4 kB)
+    fixmap  : 0xfff00000 - 0xfffe0000   ( 896 kB)
+    DMA     : 0xffc00000 - 0xffe00000   (   2 MB)
+    vmalloc : 0xc0800000 - 0xf8000000   ( 888 MB)
+    lowmem  : 0x80000000 - 0xc0000000   (1024 MB)
+    modules : 0x7f000000 - 0x80000000   (  16 MB)
+      .init : 0x80008000 - 0x80033000   ( 172 kB)
+      .text : 0x80033000 - 0x80436f10   (4112 kB)	
+      .data : 0x80438000 - 0x8045aa60   ( 139 kB) 	
+       .bss : 0x8045aa84 - 0x8047865c   ( 119 kB)   
+
+Change virtual kernel memory laoyou to be 1M aligned
+
+Virtual kernel memory layout:
+      vector  : 0xffff0000 - 0xffff1000   (   4 kB)
+    fixmap  : 0xfff00000 - 0xfffe0000   ( 896 kB)
+    DMA     : 0xffc00000 - 0xffe00000   (   2 MB)
+    vmalloc : 0xc0800000 - 0xf8000000   ( 888 MB)
+    lowmem  : 0x80000000 - 0xc0000000   (1024 MB)
+    modules : 0x7f000000 - 0x80000000   (  16 MB)
+      .init : 0x80008000 - 0x80033000   ( 172 kB)
+      .text : 0x80100000 - 0x806fffff   (6144 kB)
+      .data : 0x80700000 - 0x80722a60   ( 139 kB)
+       .bss : 0x80722a84 - 0x8074065c   ( 119 kB)
+        KPM : 0x80600000 - 0x80700000   (   1 MB)
