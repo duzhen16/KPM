@@ -135,6 +135,7 @@ ENDPROC(cpu_v7_switch_mm)
  *	- ext	- value for extended PTE bits
  */
 ENTRY(cpu_v7_set_pte_ext)
+	bl  in
 #ifdef CONFIG_MMU
 	str	r1, [r0]			@ linux version
 

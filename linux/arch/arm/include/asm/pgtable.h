@@ -24,6 +24,7 @@
 #include <mach/vmalloc.h>
 #include <asm/pgtable-hwdef.h>
 
+
 /*
  * Just any arbitrary offset to the start of the vmalloc VM area: the
  * current 8MB value just means that there will be a 8MB "hole" after the
@@ -371,6 +372,7 @@ extern void __sync_icache_dcache(pte_t pteval);
 static inline void set_pte_at(struct mm_struct *mm, unsigned long addr,
 			      pte_t *ptep, pte_t pteval)
 {
+	
 	if (addr >= TASK_SIZE){
 		set_pte_ext(ptep, pteval, 0);
 	}

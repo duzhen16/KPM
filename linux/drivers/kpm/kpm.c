@@ -25,35 +25,35 @@ struct param_list
 /* function declarations */
 struct param_list gather();
 state measure();
-int xxx_handle();
-int handle(state s);
-int kpm_page_fault_hander();
+int handle_set_pte();
+
 /* main function for KPM */
 void kpm_main()
-{
-	/* for set_pte_at() in handle_pte_fault  */
-	unsigned int * p = (unsigned int *)STACK_TOP; 
-	unsigned int * pp = (unsigned int *)((*p) + 16); //
-	unsigned int ptep = *pp;  // pte for set
-	unsigned int pte;
+{	
+	int event_type;
 	__asm__ __volatile__ (
-		"mov	%0,r11"
-		:"=r"(pte)
+		"mov	%0,r1				\n\t"	/*read event_type*/
+		:"=r"(event_type)
 	);
-	if ((pte > KPM_PA_B) && (pte > KPM_PA_E)){
-		goto jmp_out;
-	}
-	else{
-		__asm__ __volatile__(
-			"mov	r1,%0			\n\t"
-			"mov	r0,%1			\n\t"
-			"str	r1, [r0]"
-			:
-			:"r"(ptep),"r"(pte)
-		);
+	int  ret = 0;
+	switch (event_type){
+		case 1:
+			ret = handle_set_pte();
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		default:
+			goto jmp_out;
 	}
 
-
+	__asm__ __volatile__ (
+		"mov	r1,%0				\n\t"	/*pop addr of out from kpm stack*/
+		:
+		:"r"(ret)
+	);
+	
 jmp_out:
 	__asm__ __volatile__ (
 		"pop 	{r0}				\n\t"	/*pop addr of out from kpm stack*/
@@ -85,9 +85,17 @@ state measure()
 	return SECURE;
 }
 
-/* main handler */
-int handle(state s)
+int handle_set_pte()
 {
-	printk("handle function\n");
-	return 0;
+	unsigned int pteval;
+	__asm__ __volatile__ (
+		"add	r0,sp,#0xc		\n\t"	/*read pteval*/
+		"ldr 	r1,[r0]			\n\t"	
+		"mov 	%0,r1"
+		:"=r"(pteval)
+	);
+	if ((pteval > KPM_PA_E) || (pteval < KPM_PA_B))	// pteval is placed into KPM phy region
+		return 0;
+	else
+		return 1;
 }

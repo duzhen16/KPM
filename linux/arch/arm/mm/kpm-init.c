@@ -45,14 +45,6 @@ static void  __init  copy_page_dir()
 	);
 	printk("write 0x%x to ttbr1 ok\n",ttbr1_val);
 	
-	/* initialize shadow stack region to be 0 */
-	printk("initializing shadow stack...\n");
-	unsigned int * beg = (unsigned int *)STACK_BOT;
-	unsigned int * end = (unsigned int *)STACK_BASE;
-	unsigned int * p = beg;
-	for(;p < end; p++)
-		* p = 0;
-	printk("initialize ok\n");
 	return;
 }
 
@@ -73,6 +65,7 @@ static void  __init  copy()
 	printk("kpm_main function is @ 0x%p\n",kpm_main_addr);
 	do_copy(fkpm,kpm_main_addr,64); //how to determine size? 
 	printk("copy ok\n");
+	printk("KPM phy addr region is : 0x%x <-> 0x%x\n",KPM_PA_B,KPM_PA_E);
 	return ;
 }
 
@@ -122,62 +115,67 @@ static void  __init  modify_kernel_pt()
 
 void out()
 {
+	int ret;
 	__asm__ __volatile__ (
-		
-		"pop 	{r0}				\n\t"   /*restore CPSR & enable interrupt*/
-		"msr 	cpsr,r0				\n\t"
-
-		"pop 	{lr}				\n\t"	/*restore ret addr of needle*/
-
-		"mov	r0,%0				\n\t"	/*change sp to points to saved stack top*/	
-		"ldr	sp,[r0]				\n\t"
-
-		"mov    r0,#0x0 			\n\t"	/*write #0 to TTBCR.N to switch ttbr*/
-		"isb						\n\t"
-		"mcr    p15,0,r0,c2,c0,2	\n\t"
-		"isb						\n\t"
-
-		"mcr    p15,0,r0,c8,c7,0	\n\t"	/*TLB invalidate*/							
-		"isb						\n\t"
-
-		"bx 	lr"							/*branch to needle,kernel exution goes on*/
-		:
-		:"r"(STACK_TOP)
+		"mov	%0,r1				\n\t"	/*return value of KPM*/
+		:"=r"(ret)
 	);
+	if (! ret){
+		__asm__ __volatile__ (
+
+			"mov    r0,#0x0 			\n\t"	/*write #0 to TTBCR.N to switch ttbr*/
+			"isb						\n\t"
+			"mcr    p15,0,r0,c2,c0,2	\n\t"
+			"isb						\n\t"
+			
+			"pop 	{r0}				\n\t"   /*restore CPSR & enable interrupt*/
+			"msr 	cpsr,r0				\n\t"
+
+			"pop 	{lr,r3,r2,r1,r0}	\n\t"	/*restore ret addr of needle*/
+
+			"mcr    p15,0,r0,c8,c7,0	\n\t"	/*TLB invalidate*/							
+			"isb						\n\t"
+
+			"bx 	lr"							/*branch to needle,kernel exution goes on*/
+		);
+	}else{
+		printk("ERROR type is %d\n",ret);
+		/*abort system*/
+	}
+	
 }
 /* come into KPM from kernel,do context switch,store current system state to shadow stack */
 void in()
 {	
+	int event_type = 1;
 	/* do something and ready to switch to KPM */
 	unsigned int * out_addr = &out; 
 	__asm__ __volatile__ (
+		"push	{r0,r1,r2,r3,lr}	\n\t"   /*save context*/
 
-		"mov    r0,#0x1 			\n\t"	/*write #1 to TTBCR.N to switch ttbr*/
-		"isb						\n\t"
-		"mcr    p15,0,r0,c2,c0,2	\n\t"
-		"isb						\n\t"
-		
-		"mov   	r0,%0  				\n\t"	/*load stack_top to r0*/
-		"str    sp,[r0]				\n\t"	/*save sp to [stack_top]*/
-		"mov    sp,r0				\n\t"	/*change sp to points to new stack top*/
-
-		"push   {lr}				\n\t"	/*save ret addr of needle*/
-		
 		"mrs    r0,cpsr				\n\t"   /*save CPSR & disable interrupt*/
 		"push   {r0}				\n\t"   
 		"orr    r0,r0,#0x1c0	    \n\t"  
 		"msr    cpsr,r0				\n\t"
 
-		"mov 	r0,%1				\n\t"   /*save addr of out*/
+		"mov    r0,#0x1 			\n\t"	/*write #1 to TTBCR.N to switch ttbr*/
+		"isb						\n\t"
+		"mcr    p15,0,r0,c2,c0,2	\n\t"
+		"isb						\n\t"
+	);
+	__asm__ __volatile__ (
+		"mov 	r0,%0				\n\t"   /*save addr of out*/
 		"push	{r0}				\n\t"
 		
 		"mcr    p15,0,r0,c8,c7,0	\n\t"	/*TLB invalidate*/							
 		"isb						\n\t"
-		
-		"mov	r0,%2				\n\t"	/*branch to kpm*/	
+
+		"mov  	r1,%2				\n\t"	/*pass event type to KPM*/
+
+		"mov	r0,%1				\n\t"	/*branch to kpm*/	
 		"bx 	r0"							
 		:
-		:"r"(STACK_TOP),"r"(out_addr),"r"(KPM_TEXT)
+		:"r"(out_addr),"r"(KPM_TEXT),"r"(event_type)
 	);
 }
 EXPORT_SYMBOL(in);

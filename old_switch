@@ -1,0 +1,61 @@
+
+void out()
+{
+	__asm__ __volatile__ (
+		
+		"pop 	{r0}				\n\t"   /*restore CPSR & enable interrupt*/
+		"msr 	cpsr,r0				\n\t"
+
+		"pop 	{lr}				\n\t"	/*restore ret addr of needle*/
+
+		"mov	r0,%0				\n\t"	/*change sp to points to saved stack top*/	
+		"ldr	sp,[r0]				\n\t"
+
+		"mov    r0,#0x0 			\n\t"	/*write #0 to TTBCR.N to switch ttbr*/
+		"isb						\n\t"
+		"mcr    p15,0,r0,c2,c0,2	\n\t"
+		"isb						\n\t"
+
+		"mcr    p15,0,r0,c8,c7,0	\n\t"	/*TLB invalidate*/							
+		"isb						\n\t"
+
+		"bx 	lr"							/*branch to needle,kernel exution goes on*/
+		:
+		:"r"(STACK_TOP)
+	);
+}
+/* come into KPM from kernel,do context switch,store current system state to shadow stack */
+void in()
+{	
+	/* do something and ready to switch to KPM */
+	unsigned int * out_addr = &out; 
+	__asm__ __volatile__ (
+
+		"mov    r0,#0x1 			\n\t"	/*write #1 to TTBCR.N to switch ttbr*/
+		"isb						\n\t"
+		"mcr    p15,0,r0,c2,c0,2	\n\t"
+		"isb						\n\t"
+		
+		"mov   	r0,%0  				\n\t"	/*load stack_top to r0*/
+		"str    sp,[r0]				\n\t"	/*save sp to [stack_top]*/
+		"mov    sp,r0				\n\t"	/*change sp to points to new stack top*/
+
+		"push   {lr}				\n\t"	/*save ret addr of needle*/
+		
+		"mrs    r0,cpsr				\n\t"   /*save CPSR & disable interrupt*/
+		"push   {r0}				\n\t"   
+		"orr    r0,r0,#0x1c0	    \n\t"  
+		"msr    cpsr,r0				\n\t"
+
+		"mov 	r0,%1				\n\t"   /*save addr of out*/
+		"push	{r0}				\n\t"
+		
+		"mcr    p15,0,r0,c8,c7,0	\n\t"	/*TLB invalidate*/							
+		"isb						\n\t"
+		
+		"mov	r0,%2				\n\t"	/*branch to kpm*/	
+		"bx 	r0"							
+		:
+		:"r"(STACK_TOP),"r"(out_addr),"r"(KPM_TEXT)
+	);
+}
