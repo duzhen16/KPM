@@ -179,3 +179,12 @@ void in()
 	);
 }
 EXPORT_SYMBOL(in);
+void mmu_oper()
+{
+	__asm__ __volatile__ (
+		"mcr    p15,0,r0,c2,c0,0	\n\t"	// write r0 to ttbr0
+		"mcr    p15,0,r0,c2,c0,1	\n\t"	// write r0 to ttbr1
+		"mcr    p15,0,r0,c2,c0,2	\n\t"	// write r0 to ttbcr
+		"mcr    p15,0,r0,c1,c0,0	\n\t"	// write r0 to sctlr
+	);
+}

@@ -86,6 +86,7 @@ all write operations to these registers should be verified!
 2.Linux data structures
 	2.1 inti_mm init_mm was defined in /arch/arm/kernel/init_task.c：
 			struct mm_struct init_mm = INIT_MM(init_mm);
+		init__mm was defined in /mm/init-mm.c
 			
  
 

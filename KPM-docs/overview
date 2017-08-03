@@ -6,17 +6,17 @@ Objectives:
 	 |---- 1.1 creating a seperate addr space by altering page table	(done)
 	 |---- 1.2 avoid kernel to disable seperate addr space
 			 |
-			 |---- 1.2.1 monitering page table update to avoid kernel modifying page table to disable seperate addr space 	 (ing)
-			 |---- 1.2.2 instrumenting all MMU (CP15) configuration opetations to avoid kernel using unverified page table				-- implementing all "write to ttbr"  operations!
-			 																   to enable MMU persistently                    (will)     -- implementing all "write to sctlr" operations
+			 |---- 1.2.1 monitering page table update (page fault interrupt) to avoid kernel modifying page table to disable seperate addr space 	 (done)
+			 |---- 1.2.2 instrumenting all MMU (CP15) configuration opetations to avoid kernel using unverified page table			
+			 		-- implementing all "write to ttbr"  operations!
+			 		-- implementing all "write to sctlr" operations to enable MMU persistently   (will)    
 
 
 2) context switch
 	 |
-	 |---- 2.1 preventing kernel from gaining control while KPM is accessible at current status		(ing)
-	 |---- 2.2 making sure that in() function is the only way switch into KPM	 (will)
+	 |---- 2.1 preventing kernel from gaining control while KPM is accessible at current status		(done)
+	 |---- 2.2 making sure that in() function is the only way switch into KPM	 (done)
 
-3) against attack
 
 
 
