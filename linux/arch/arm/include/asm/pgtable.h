@@ -24,6 +24,7 @@
 #include <mach/vmalloc.h>
 #include <asm/pgtable-hwdef.h>
 
+#include <linux/kpm.h>
 
 /*
  * Just any arbitrary offset to the start of the vmalloc VM area: the
@@ -372,12 +373,21 @@ extern void __sync_icache_dcache(pte_t pteval);
 static inline void set_pte_at(struct mm_struct *mm, unsigned long addr,
 			      pte_t *ptep, pte_t pteval)
 {
-	
 	if (addr >= TASK_SIZE){
+		__asm__ __volatile__ (
+			"push 	{r8}		\n\t"
+			"mov  	r8,#1		\n\t"
+			"bl  	in"
+		);
 		set_pte_ext(ptep, pteval, 0);
 	}
 	else {
 		__sync_icache_dcache(pteval);
+		__asm__ __volatile__ (
+			"push 	{r8}		\n\t"
+			"mov  	r8,#1		\n\t"
+			"bl  	in"
+		);
 		set_pte_ext(ptep, pteval, PTE_EXT_NG);
 	}
 }

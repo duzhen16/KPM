@@ -136,6 +136,8 @@ void out()
 			"mcr    p15,0,r0,c8,c7,0	\n\t"	/*TLB invalidate*/							
 			"isb						\n\t"
 
+			"pop 	{r8}				\n\t"
+
 			"bx 	lr"							/*branch to needle,kernel exution goes on*/
 		);
 	}else{
@@ -147,7 +149,7 @@ void out()
 /* come into KPM from kernel,do context switch,store current system state to shadow stack */
 void in()
 {	
-	int event_type = 1;
+
 	/* do something and ready to switch to KPM */
 	unsigned int * out_addr = &out; 
 	__asm__ __volatile__ (
@@ -170,12 +172,10 @@ void in()
 		"mcr    p15,0,r0,c8,c7,0	\n\t"	/*TLB invalidate*/							
 		"isb						\n\t"
 
-		"mov  	r1,%2				\n\t"	/*pass event type to KPM*/
-
 		"mov	r0,%1				\n\t"	/*branch to kpm*/	
 		"bx 	r0"							
 		:
-		:"r"(out_addr),"r"(KPM_TEXT),"r"(event_type)
+		:"r"(out_addr),"r"(KPM_TEXT)
 	);
 }
 EXPORT_SYMBOL(in);

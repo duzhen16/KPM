@@ -32,7 +32,7 @@ void kpm_main()
 {	
 	int event_type;
 	__asm__ __volatile__ (
-		"mov	%0,r1				\n\t"	/*read event_type*/
+		"mov	%0,r8				\n\t"	/*read event_type*/
 		:"=r"(event_type)
 	);
 	int  ret = 0;
